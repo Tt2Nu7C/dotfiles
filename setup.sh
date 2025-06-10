@@ -1,4 +1,5 @@
 echo "Configuring ZSH\n"
+sudo apt install zoxide duf wireguard vim bat
 sudo mkdir -p /usr/local/share/zsh_conf
 sudo chown $USER:$USER -R /usr/local/share/zsh_conf
 
