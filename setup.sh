@@ -16,6 +16,7 @@ mv zsh-syntax-highlighting /usr/local/share/zsh_conf
 echo "Configuring TMUX\n"
 git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 cp .tmux.conf .vimrc .zshrc ~/
+sudo chsh -s /bin/zsh
 
-echo "Setup done. Use chsh -s /bin/zsh to change shells then logout/login again\n"
+echo "Setup done. Logout and login again to use ZSH\n"
 echo "To install tmux plugins: press prefix + I (capital i, as in Install) to fetch the plugin.\n"
