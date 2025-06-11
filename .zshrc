@@ -27,8 +27,15 @@ bindkey '^[[Z' undo                               # shift + tab undo last action
 
 # prompt
 NEWLINE=$'\n'
-PS1="%F{87}┌──[%n%f@%F{87}%M:%f%d%F{87}]${NEWLINE}└─% $%f "
-#PS1="%F{197}┌──[%n%f@%F{197}%M:%f%d%F{197}]${NEWLINE}└─% $%f " #root user uses hot/red colour
+NEWLINE=$'\n'
+if [[ $USER == "root" ]]; then
+    COLOR=197  # Hot/red for root
+elif [[ $USER == "son" ]]; then
+    COLOR=87   # Cyan for son
+else
+    COLOR=040  # Green for others
+fi
+PS1="%F{$COLOR}┌──[%n%f@%F{$COLOR}%M:%f%d%F{$COLOR}]${NEWLINE}└─% $%f "
 
 # Would you like to use another custom folder than $ZSH/custom?
 # ZSH_CUSTOM=/path/to/new-custom-folder
@@ -60,6 +67,8 @@ alias tt='tmux attach-session -t $1'
 alias ttn='tmux new-session -s $1'
 alias ttl='tmux list-session'
 alias htp='htop -p $1'
+alias wgup='sudo wg-quick up $1'
+alias wgdown='sudo wg-quick down $1'
 
 # history
 HISTFILE=~/.cache/.histfile
@@ -157,5 +166,10 @@ unzip_d () {
 }
 
 ntfy_post() {
-        curl -H "Authorization: " -d "$*" http://
+        curl -H "Authorization: Bearer tk_rxrmfp4j3u3928vw9lmorbw6bjrml" -d "$*" http://192.168.0.9:47346/home
+}
+
+function wgreload () {
+    wg-quick down $1
+    wg-quick up $1
 }
