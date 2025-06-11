@@ -18,3 +18,4 @@ git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 cp .tmux.conf .vimrc .zshrc ~/
 
 echo "Setup done. Use chsh -s /bin/zsh to change shells then logout/login again\n"
+echo "To install tmux plugins: press prefix + I (capital i, as in Install) to fetch the plugin.\n"
