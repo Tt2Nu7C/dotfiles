@@ -4,7 +4,7 @@ echo -e "Installing tools\n"
 # Detect distro and install packages
 if [ -f /etc/debian_version ]; then
     sudo apt update
-    sudo apt install -y zsh zoxide duf wireguard-tools vim batcat tmux git nmap
+    sudo apt install -y zsh zoxide duf wireguard-tools vim bat tmux git nmap
 elif [ -f /etc/arch-release ]; then
     sudo pacman -Syu --noconfirm zsh zoxide duf wireguard-tools vim bat tmux git nmap
 else
