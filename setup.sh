@@ -28,7 +28,7 @@ dirs=(
 for dir in "${dirs[@]}"; do
     if [ -d "$base_dir/$dir" ]; then
         echo "Deleting $base_dir/$dir"
-        rm -rf "$base_dir/$dir"
+        sudo rm -rf "$base_dir/$dir"
     fi
 done
 
