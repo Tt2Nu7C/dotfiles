@@ -1,3 +1,10 @@
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
 # Path configuration
 export PATH=$HOME/bin:/usr/local/bin:$HOME/.surrealdb:$HOME/Documents/IDEs:$PATH
 export GBM_BACKEND=nvidia-drm
@@ -10,6 +17,8 @@ export ZSH=$ZSHDIR/ohmyzsh
 export HISTFILE=~/.cache/.histfile
 export HISTSIZE=1000
 export SAVEHIST=2000
+export EDITOR='vim'
+
 setopt hist_expire_dups_first hist_ignore_dups hist_ignore_space hist_verify
 HIST_STAMPS="yyyy-mm-dd"
 
@@ -66,6 +75,8 @@ wgreload() {
     wg-quick up $1
 }
 
+typeset -g ZSH_DISABLE_COMPFIX=true
+
 # Sources
 source $ZSHDIR/zsh-autosuggestions/zsh-autosuggestions.zsh
 source $ZSH/oh-my-zsh.sh
@@ -93,6 +104,3 @@ if [[ -f /etc/debian_version ]]; then
 elif [[ -f /etc/arch-release ]]; then
     alias cat='bat'
 fi
-
-# Editor
-export EDITOR='vim'
