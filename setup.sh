@@ -55,6 +55,7 @@ git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 
 # Copy dotfiles (ensure they exist first)
 cp -v .tmux.conf .vimrc .zshrc .p10k.zsh ~/ 2>/dev/null || echo "Dotfiles not found, skipped copy."
+sudo cp -v .tmux.conf .vimrc .zshrc .p10k.zsh /root/ 2>/dev/null || echo "Dotfiles not found, skipped copy."
 
 # Change default shell to ZSH
 chsh -s /bin/zsh
