@@ -16,6 +16,22 @@ echo -e "Configuring ZSH\n"
 mkdir -p ~/.cache
 touch ~/.cache/.histfile
 
+
+base_dir="/usr/local/share/zsh_conf"
+dirs=(
+    "ohmyzsh"
+    "zsh-autosuggestions"
+    "zsh-syntax-highlighting"
+    "powerlevel10k"
+)
+
+for dir in "${dirs[@]}"; do
+    if [ -d "$base_dir/$dir" ]; then
+        echo "Deleting $base_dir/$dir"
+        rm -rf "$base_dir/$dir"
+    fi
+done
+
 sudo install -d -o "$USER" -g "$USER" /usr/local/share/zsh_conf
 
 # Clone ZSH plugins/themes
@@ -25,6 +41,7 @@ repos=(
     "https://github.com/zsh-users/zsh-syntax-highlighting"
     "https://github.com/romkatv/powerlevel10k.git --depth=1"
 )
+
 
 for repo in "${repos[@]}"; do
     url=${repo%% *}
