@@ -104,3 +104,4 @@ if [[ -f /etc/debian_version ]]; then
 elif [[ -f /etc/arch-release ]]; then
     alias cat='bat'
 fi
+
