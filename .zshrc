@@ -53,11 +53,15 @@ paste_rs_post() {
     curl --data-binary @${file} https://paste.rs
 }
 
-build_server_release() {
-    local dirname=$PWD
-    local result=${dirname##*/} result=${result:-/}
-    docker run -v cargo-cache:/root/.cargo/registry -v "$PWD:/volume" --rm -it clux/muslrust:stable cargo update
-    docker run -v cargo-cache:/root/.cargo/registry -v "$PWD:/volume" --rm -it clux/muslrust:stable cargo b --package $result --bin $result --release
+function build_server_release() {
+        dirname=$PWD
+        #shopt -s extglob           # enable +(...) glob syntax
+        result=${dirname%%+(/)}    # trim however many trailing slashes exist
+        result=${result##*/}       # remove everything before the last / that still remains
+        result=${result:-/}        # correct for dirname=/ case
+        docker run -v cargo-cache:/root/.cargo/registry -v "$PWD:/volume" --rm -it clux/muslrust:stable cargo update
+        docker run -v cargo-cache:/root/.cargo/registry -v "$PWD:/volume" --rm -it clux/muslrust:stable cargo b --package $result --bin $result --release
+
 }
 
 unzip_d() {
