@@ -59,8 +59,8 @@ function build_server_release() {
         result=${dirname%%+(/)}    # trim however many trailing slashes exist
         result=${result##*/}       # remove everything before the last / that still remains
         result=${result:-/}        # correct for dirname=/ case
-        docker run -v cargo-cache:/root/.cargo/registry -v "$PWD:/volume" --rm -it clux/muslrust:stable cargo update
-        docker run -v cargo-cache:/root/.cargo/registry -v "$PWD:/volume" --rm -it clux/muslrust:stable cargo b --package $result --bin $result --release
+        cargo update
+        cargo b --package $result --bin $result --release --target x86_64-unknown-linux-musl
 
 }
 
@@ -71,12 +71,24 @@ unzip_d() {
 }
 
 ntfy_post() {
-    curl -H "Authorization: Bearer tk_rxrmfp4j3u3928vw9lmorbw6bjrml" -d "$*" http://57.128.166.109:47346/home
+    curl -H "Authorization: Bearer tk_rxrmfp4j3u3928vw9lmorbw6bjrml" -d "$*" http://91.98.71.85:47346/home
 }
 
 wgreload() {
     wg-quick down $1
+    echo -e "Bringing back up $1"
     wg-quick up $1
+}
+
+lbr_ffmpeg() {
+    mkdir -p LBR || return 1
+    for file in "$@"; do
+        [ -f "$file" ] || continue
+        base=$(basename "$file" | sed 's/\.[^.]*$//')  # Remove the last extension
+        ffmpeg -i "$file" -c:v libx264 -b:v 2200k -pass 1 -f null /dev/null &&
+        ffmpeg -i "$file" -c:v libx264 -b:v 2200k -pass 2 -c:a eac3 -b:a 320k -c:s copy -f matroska "LBR/${base}_LBR.mkv" &&
+        rm -f ffmpeg2pass-0.log*
+    done
 }
 
 typeset -g ZSH_DISABLE_COMPFIX=true
@@ -101,6 +113,7 @@ alias wgup='sudo wg-quick up $1'
 alias wgdown='sudo wg-quick down $1'
 alias history='history 0'
 alias cd='z'
+alias duf='duf --only local,network,fuse'
 
 # Dynamic cat alias based on distro
 if [[ -f /etc/debian_version ]]; then
