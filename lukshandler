@@ -1,0 +1,213 @@
+#!/bin/bash
+
+# Script to manage LUKS encrypted devices (image files or partitions)
+# Usage: sudo ./luksmanager <command> <arguments>
+
+set -e
+
+usage() {
+    echo "Usage: $0 <command> [arguments]"
+    echo "Commands:"
+    echo "  create <device_path> [size] - Create an encrypted device (size: e.g., 100M, 2G, 1T for files)"
+    echo "  open <device_path> <dev_name> <mount_point> - Open and mount LUKS device"
+    echo "  close <dev_name> <mount_point> - Unmount and close LUKS device"
+    echo "Examples:"
+    echo "  Create image: $0 create /path/to/image.img 100M"
+    echo "  Create on partition: $0 create /dev/sdb1"
+    exit 1
+}
+
+check_root() {
+    if [ "$EUID" -ne 0 ]; then
+        echo "Error: This script must be run as root"
+        exit 1
+    fi
+}
+
+is_block_device() {
+    local path="$1"
+    [ -b "$path" ]
+}
+
+create_image() {
+    local img_path="$1"
+    local size_input="$2"
+    local user_uid=${SUDO_UID:-1000}
+    local user_gid=${SUDO_GID:-1000}
+
+    if [ -f "$img_path" ]; then
+        read -p "Image file $img_path exists. Overwrite? (y/N): " confirm
+        if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+            echo "Aborted: File not overwritten"
+            exit 1
+        fi
+        rm -f "$img_path"
+    fi
+
+    # Parse size input (e.g., 100K, 100M, 2G, 1T)
+    local size_num=$(echo "$size_input" | grep -oE '^[0-9]+')
+    local unit=$(echo "$size_input" | grep -oE '[KMGT]$')
+
+    if [ -z "$size_num" ] || [ -z "$unit" ]; then
+        echo "Error: Size must be a number followed by K, M, G, or T (e.g., 100M)"
+        exit 1
+    fi
+
+    # Convert size to bytes for dd (bs=32M for main, bs=1K for remainder)
+    local size_bytes
+    case "$unit" in
+        K) size_bytes=$((size_num * 1024)) ;;          # KiB to bytes
+        M) size_bytes=$((size_num * 1024 * 1024)) ;;   # MiB to bytes
+        G) size_bytes=$((size_num * 1024 * 1024 * 1024)) ;; # GiB to bytes
+        T) size_bytes=$((size_num * 1024 * 1024 * 1024 * 1024)) ;; # TiB to bytes
+        *) echo "Error: Invalid size unit. Use K, M, G, or T"; exit 1 ;;
+    esac
+    local block_size=$((32 * 1024 * 1024)) # 32MiB in bytes
+    local size_blocks=$((size_bytes / block_size)) # Number of 32MiB blocks
+    local remainder_bytes=$((size_bytes % block_size)) # Remaining bytes
+
+    if [ "$size_bytes" -lt $((1024 * 1024)) ]; then
+        echo "Error: Size too small, must be at least 1MiB"
+        exit 1
+    fi
+
+    echo "Creating image file: $img_path (${size_input})"
+    if [ "$remainder_bytes" -eq 0 ]; then
+        dd if=/dev/urandom of="$img_path" bs=32M count="$size_blocks" iflag=fullblock status=progress
+    else
+        [ "$size_blocks" -gt 0 ] && dd if=/dev/urandom of="$img_path" bs=32M count="$size_blocks" iflag=fullblock status=progress
+        dd if=/dev/urandom of="$img_path" bs=1K count=$((remainder_bytes / 1024)) status=progress oflag=append conv=notrunc
+    fi
+    chmod 600 "$img_path"
+    chown "$user_uid:$user_gid" "$img_path"
+}
+
+create_device() {
+    local device_path="$1"
+    local size_input="$2"
+    local user_uid=${SUDO_UID:-1000}
+    local user_gid=${SUDO_GID:-1000}
+
+    if is_block_device "$device_path"; then
+        if [ -n "$size_input" ]; then
+            echo "Error: Size parameter is not applicable for block devices"
+            exit 1
+        fi
+        echo "Setting up LUKS on block device $device_path"
+    else
+        if [ -z "$size_input" ]; then
+            echo "Error: Size parameter required for image files (e.g., 100M)"
+            exit 1
+        fi
+        create_image "$device_path" "$size_input"
+    fi
+
+    cryptsetup luksFormat "$device_path"
+    echo "LUKS setup complete on $device_path. Use 'open' command to mount."
+    chown "$user_uid:$user_gid" "$device_path"
+}
+
+open_luks() {
+    local device_path="$1"
+    local dev_name="$2"
+    local mount_point="$3"
+    local user_uid=${SUDO_UID:-1000}
+    local user_gid=${SUDO_GID:-1000}
+
+    if [ ! -e "$device_path" ]; then
+        echo "Error: Device or file $device_path does not exist"
+        exit 1
+    fi
+
+    if [ -e "/dev/mapper/$dev_name" ]; then
+        echo "Error: Device $dev_name already exists"
+        exit 1
+    fi
+
+    echo "Opening LUKS device $device_path as $dev_name"
+    cryptsetup luksOpen "$device_path" "$dev_name"
+
+    if [ ! -e "/dev/mapper/$dev_name" ]; then
+        echo "Error: Failed to open LUKS device"
+        exit 1
+    fi
+
+    # Check if filesystem exists, prompt for filesystem if not
+    if ! blkid "/dev/mapper/$dev_name" > /dev/null; then
+        echo "No filesystem detected on /dev/mapper/$dev_name"
+        # Get available mkfs tools, strip 'mkfs.' prefix
+        fs_types=$(ls /sbin/mkfs.* 2>/dev/null | sed 's|.*/mkfs\.||' | sort | tr '\n' ' ')
+        if [ -z "$fs_types" ]; then
+            echo "Error: No mkfs tools found on the system"
+            cryptsetup luksClose "$dev_name"
+            [ -n "$loop_dev" ] && losetup -d "$loop_dev" 2>/dev/null
+            exit 1
+        fi
+        echo "Available filesystems: $fs_types"
+        read -p "Enter filesystem type (default: ext4): " fs_type
+        fs_type=${fs_type:-ext4}
+        # Verify chosen filesystem is available
+        if ! command -v "mkfs.$fs_type" >/dev/null; then
+            echo "Error: Filesystem type '$fs_type' not supported. Available: $fs_types"
+            cryptsetup luksClose "$dev_name"
+            [ -n "$loop_dev" ] && losetup -d "$loop_dev" 2>/dev/null
+            exit 1
+        fi
+        echo "Creating $fs_type filesystem on /dev/mapper/$dev_name"
+        mkfs."$fs_type" "/dev/mapper/$dev_name"
+    fi
+
+    mkdir -p "$mount_point"
+    echo "Mounting /dev/mapper/$dev_name to $mount_point"
+    mount "/dev/mapper/$dev_name" "$mount_point"
+    chmod -R 700 "$mount_point"
+    chown -R "$user_uid:$user_gid" "$mount_point"
+    echo "Mounted successfully"
+}
+
+close_luks() {
+    local dev_name="$1"
+    local mount_point="$2"
+
+    if [ ! -e "/dev/mapper/$dev_name" ]; then
+        echo "Error: Device $dev_name does not exist"
+        exit 1
+    fi
+
+    if mountpoint -q "$mount_point"; then
+        echo "Unmounting $mount_point"
+        umount "$mount_point"
+    fi
+
+    echo "Closing LUKS device $dev_name"
+    cryptsetup luksClose "$dev_name"
+    echo "Device closed"
+
+    if [ -d "$mount_point" ] && [ -z "$(ls -A "$mount_point")" ]; then
+        rmdir "$mount_point"
+    else
+        echo "$mount_point is not empty or doesn't exist! Aborting directory removal! Manual intervention required."
+    fi
+}
+
+# Main logic
+case "$1" in
+    create)
+        [ $# -lt 2 ] || [ $# -gt 3 ] && usage
+        check_root
+        create_device "$2" "${3:-}"
+        ;;
+    open)
+        [ $# -ne 4 ] && usage
+        check_root
+        open_luks "$2" "$3" "$4"
+        ;;
+    close)
+        [ $# -ne 3 ] && usage
+        check_root
+        close_luks "$2" "$3"
+        ;;
+    *)
+        usage
+        ;;
+esac
