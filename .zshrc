@@ -6,7 +6,6 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 # Path configuration
-export PATH=$HOME/bin:/usr/local/bin:$HOME/.surrealdb:$HOME/Documents/IDEs:$PATH
 export GBM_BACKEND=nvidia-drm
 export __GLX_VENDOR_LIBRARY_NAME=nvidia
 export LANG=en_GB.UTF-8
@@ -54,13 +53,13 @@ paste_rs_post() {
 }
 
 function build_server_release() {
-        dirname=$PWD
-        #shopt -s extglob           # enable +(...) glob syntax
-        result=${dirname%%+(/)}    # trim however many trailing slashes exist
-        result=${result##*/}       # remove everything before the last / that still remains
-        result=${result:-/}        # correct for dirname=/ case
-        cargo update
-        cargo b --package $result --bin $result --release --target x86_64-unknown-linux-musl
+    dirname=$PWD
+    #shopt -s extglob           # enable +(...) glob syntax
+    result=${dirname%%+(/)}    # trim however many trailing slashes exist
+    result=${result##*/}       # remove everything before the last / that still remains
+    result=${result:-/}        # correct for dirname=/ case
+    cargo update
+    cargo b --package $result --bin $result --release --target x86_64-unknown-linux-musl
 
 }
 
@@ -101,7 +100,8 @@ eval "$(zoxide init zsh)"
 source /usr/local/share/zsh_conf/powerlevel10k/powerlevel10k.zsh-theme
 
 # Aliases
-alias ls='ls -lah --color=auto'
+#alias ls='ls -lah --color=auto'
+alias ls='eza -la'
 alias ps='ps aux'
 alias reboot='shutdown -r now'
 alias htop='htop -d 8'
@@ -114,6 +114,17 @@ alias wgdown='sudo wg-quick down $1'
 alias history='history 0'
 alias cd='z'
 alias duf='duf --only local,network,fuse'
+alias jcat='journalctl --output=cat'
+alias ssrestart='sudo systemctl restart'
+alias ssstart='sudo systemctl start'
+alias ssstop='sudo systemctl stop'
+alias ssenable='sudo systemctl enable'
+alias ssdissable='sudo systemctl disable'
+alias ssstat='systemctl status'
+alias ssreload='sudo systemctl reload'
+alias sslj='systemctl list-jobs'
+alias sslsr='systemctl list-units --type=service --state=running'
+
 
 # Dynamic cat alias based on distro
 if [[ -f /etc/debian_version ]]; then
