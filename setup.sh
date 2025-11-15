@@ -14,6 +14,8 @@ fi
 
 echo -e "Configuring ZSH\n"
 mkdir -p ~/.cache
+mkdir -p ~/.config/htop
+sudo mkdir -p /root/.config/htop
 touch ~/.cache/.histfile
 
 
@@ -55,8 +57,12 @@ git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 
 # Copy dotfiles (ensure they exist first)
 cp -f -v .tmux.conf .vimrc .zshrc .p10k.zsh ~/ 2>/dev/null || echo "Dotfiles not found, skipped copy."
+cp -f -v htoprc ~/.config/htop/ 2>/dev/null || echo "Dotfiles not found, skipped copy."
+
+sudo cp -f -v htoprc /root/.config/htop/ 2>/dev/null || echo "Dotfiles not found, skipped copy."
 sudo cp -f -v .tmux.conf .vimrc .zshrc .p10k.zsh /root/ 2>/dev/null || echo "Dotfiles not found, skipped copy."
-sudo cp -f -v sshd_config /etc/ssh/
+
+#sudo cp -f -v sshd_config /etc/ssh/
 
 # Change default shell to ZSH
 chsh -s /bin/zsh
