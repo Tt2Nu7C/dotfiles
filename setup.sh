@@ -61,6 +61,8 @@ cp -f -v htoprc ~/.config/htop/ 2>/dev/null || echo "Dotfiles not found, skipped
 
 sudo cp -f -v htoprc /root/.config/htop/ 2>/dev/null || echo "Dotfiles not found, skipped copy."
 sudo cp -f -v .tmux.conf .vimrc .zshrc .p10k.zsh /root/ 2>/dev/null || echo "Dotfiles not found, skipped copy."
+sudo cp lukshandler /usr/local/bin/ 2>/dev/null || echo "lukshandler not found, skipped copy"
+sudo chown 1000:1000 /usr/local/bin/lukshandler
 
 #sudo cp -f -v sshd_config /etc/ssh/
 
