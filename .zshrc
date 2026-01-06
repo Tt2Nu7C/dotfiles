@@ -90,6 +90,15 @@ lbr_ffmpeg() {
     done
 }
 
+yt-dlpLoop() {
+    while true;
+    do
+        printf "Enter URL or Q to quit\n";
+	read input; [ "$input" = Q ] && break;
+	 yt-dlp "$input";
+     done
+}
+
 typeset -g ZSH_DISABLE_COMPFIX=true
 
 # Sources
@@ -119,12 +128,11 @@ alias ssrestart='sudo systemctl restart'
 alias ssstart='sudo systemctl start'
 alias ssstop='sudo systemctl stop'
 alias ssenable='sudo systemctl enable'
-alias ssdissable='sudo systemctl disable'
+alias ssdisable='sudo systemctl disable'
 alias ssstat='systemctl status'
 alias ssreload='sudo systemctl reload'
 alias sslj='systemctl list-jobs'
 alias sslsr='systemctl list-units --type=service --state=running'
-
 
 # Dynamic cat alias based on distro
 if [[ -f /etc/debian_version ]]; then
@@ -133,3 +141,5 @@ elif [[ -f /etc/arch-release ]]; then
     alias cat='bat'
 fi
 
+[[ -s "/etc/grc.zsh" ]] && source /etc/grc.zsh
+zstyle ':completion:*' rehash true
