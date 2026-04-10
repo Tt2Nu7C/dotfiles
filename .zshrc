@@ -1,27 +1,33 @@
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+# ----------------------------
+# Powerlevel10k instant prompt (MUST stay first)
+# ----------------------------
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-$USER.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-$USER.zsh"
 fi
 
-# Path configuration
+
+# ----------------------------
+# Environment
+# ----------------------------
 export GBM_BACKEND=nvidia-drm
 export __GLX_VENDOR_LIBRARY_NAME=nvidia
 export LANG=en_GB.UTF-8
-
-# ZSH configuration
 export ZSHDIR=/usr/local/share/zsh_conf
 export ZSH=$ZSHDIR/ohmyzsh
 export HISTFILE=~/.cache/.histfile
 export HISTSIZE=1000
 export SAVEHIST=2000
 export EDITOR='vim'
+export PAGER='bat'
+source /home/son/.config/restic/resticenv
 
 setopt hist_expire_dups_first hist_ignore_dups hist_ignore_space hist_verify
 HIST_STAMPS="yyyy-mm-dd"
 
+
+# ----------------------------
 # Key bindings
+# ----------------------------
 bindkey -e
 bindkey ' ' magic-space
 bindkey '^[[3;5~' kill-word
@@ -34,19 +40,67 @@ bindkey '^[[H' beginning-of-line
 bindkey '^[[F' end-of-line
 bindkey '^[[Z' undo
 
-# Oh My Zsh theme
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-# Plugins
-plugins=(git)
-#ENABLE_CORRECTION="true"
+# ----------------------------
+# Plugins (NO GRC HERE)
+# ----------------------------
+plugins=(git zoxide)
+eval "$(zoxide init zsh)"
 
-# Other settings
+source $ZSH/oh-my-zsh.sh
+source $ZSHDIR/zsh-autosuggestions/zsh-autosuggestions.zsh
+source $ZSHDIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source <(fzf --zsh)
+
+# ----------------------------
+# Shell behaviour
+# ----------------------------
 WORDCHARS=${WORDCHARS/\/}
 PROMPT_EOL_MARK=""
 COMPLETION_WAITING_DOTS="%F{yellow}waiting...%f"
+typeset -g ZSH_DISABLE_COMPFIX=true
 
+
+# ----------------------------
+# Aliases (ALL aliases together)
+# ----------------------------
+#alias ls='ls -lah --color=auto'
+alias ls='eza -la'
+alias ps='ps aux'
+alias reboot='shutdown -r now'
+alias htop='htop -d 8'
+alias tt='tmux attach-session -t $1'
+alias ttn='tmux new-session -s $1'
+alias ttl='tmux list-session'
+alias htp='htop -p $1'
+alias wgup='sudo wg-quick up $1'
+alias wgdown='sudo wg-quick down $1'
+alias history='history 0'
+alias cd='z'
+alias duf='duf --only local,network,fuse'
+alias jcat='journalctl --output=cat'
+alias ssrestart='sudo systemctl restart'
+alias ssstart='sudo systemctl start'
+alias ssstop='sudo systemctl stop'
+alias ssenable='sudo systemctl enable'
+alias ssdisable='sudo systemctl disable'
+alias ssstat='sudo systemctl status'
+alias ssreload='sudo systemctl reload'
+alias sslj='systemctl list-jobs'
+alias sslsr='systemctl list-units --type=service --state=running'
+alias inv='vim $(fzf -m --preview="bat --color=always {}")'
+
+# Dynamic cat alias based on distro
+if [[ -f /etc/debian_version ]]; then
+    alias cat='batcat'
+elif [[ -f /etc/arch-release ]]; then
+    alias cat='bat'
+fi
+
+
+# ----------------------------
 # Functions
+# ----------------------------
 paste_rs_post() {
     local file=${1:-/dev/stdin}
     curl --data-binary @${file} https://paste.rs
@@ -60,7 +114,6 @@ function build_server_release() {
     result=${result:-/}        # correct for dirname=/ case
     cargo update
     cargo b --package $result --bin $result --release --target x86_64-unknown-linux-musl
-
 }
 
 unzip_d() {
@@ -70,7 +123,7 @@ unzip_d() {
 }
 
 ntfy_post() {
-    curl -H "Authorization: Bearer tk_rxrmfp4j3u3928vw9lmorbw6bjrml" -d "$*" http://91.98.71.85:47346/home
+    curl -H "Authorization: Bearer tk_ukmfwmse2ui8tiezn0xh46q55tgxu" -d "$*" http://10.4.0.2:47346/home
 }
 
 wgreload() {
@@ -94,52 +147,49 @@ yt-dlpLoop() {
     while true;
     do
         printf "Enter URL or Q to quit\n";
-	read input; [ "$input" = Q ] && break;
-	 yt-dlp "$input";
+        read input; [ "$input" = Q ] && break;
+         yt-dlp "$input";
      done
 }
 
-typeset -g ZSH_DISABLE_COMPFIX=true
+resticreport() {
+    # Color codes
+    GREEN='\033[0;32m'
+    CYAN='\033[0;36m'
+    NC='\033[0m' # No Color
+    # Print overall repository stats
+    echo -e "\n${GREEN}=== Repository Stats ===${NC}"
+    restic stats --mode raw-data
+    echo
+    # Get all snapshots
+    SNAPSHOTS=$(restic snapshots --json)
+    # Loop through each snapshot
+    echo "$SNAPSHOTS" | jq -c '.[]' | while read -r SNAP; do
+        ID=$(echo "$SNAP" | jq -r '.short_id')
+        TAGS=$(echo "$SNAP" | jq -r '.tags | join(", ")')
+        TIME=$(echo "$SNAP" | jq -r '.time')
+        echo -e "${GREEN}=== ${TAGS} Snapshot ${ID} (${TIME}) ===${NC}"
+        # Per-snapshot stats
+        restic stats "$ID" --mode raw-data
+        echo
+    done
+}
 
-# Sources
-source $ZSHDIR/zsh-autosuggestions/zsh-autosuggestions.zsh
-source $ZSH/oh-my-zsh.sh
-source $ZSHDIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-eval "$(zoxide init zsh)"
-source /usr/local/share/zsh_conf/powerlevel10k/powerlevel10k.zsh-theme
-
-# Aliases
-#alias ls='ls -lah --color=auto'
-alias ls='eza -la'
-alias ps='ps aux'
-alias reboot='shutdown -r now'
-alias htop='htop -d 8'
-alias tt='tmux attach-session -t $1'
-alias ttn='tmux new-session -s $1'
-alias ttl='tmux list-session'
-alias htp='htop -p $1'
-alias wgup='sudo wg-quick up $1'
-alias wgdown='sudo wg-quick down $1'
-alias history='history 0'
-alias cd='z'
-alias duf='duf --only local,network,fuse'
-alias jcat='journalctl --output=cat'
-alias ssrestart='sudo systemctl restart'
-alias ssstart='sudo systemctl start'
-alias ssstop='sudo systemctl stop'
-alias ssenable='sudo systemctl enable'
-alias ssdisable='sudo systemctl disable'
-alias ssstat='systemctl status'
-alias ssreload='sudo systemctl reload'
-alias sslj='systemctl list-jobs'
-alias sslsr='systemctl list-units --type=service --state=running'
-
-# Dynamic cat alias based on distro
-if [[ -f /etc/debian_version ]]; then
-    alias cat='batcat'
-elif [[ -f /etc/arch-release ]]; then
-    alias cat='bat'
+# ----------------------------
+# GRC (AFTER aliases + functions)
+# ----------------------------
+if [[ -f /usr/share/grc/grc.zsh ]]; then
+    source /usr/share/grc/grc.zsh
 fi
 
-[[ -s "/etc/grc.zsh" ]] && source /etc/grc.zsh
-zstyle ':completion:*' rehash true
+# Optional: wrap modern replacements
+#alias eza='grc eza'
+#alias batcat='grc batcat'
+
+# ----------------------------
+# Powerlevel10k theme (ALWAYS LAST)
+# ----------------------------
+[[ -f /usr/local/share/zsh_conf/powerlevel10k/powerlevel10k.zsh-theme ]] && \
+source /usr/local/share/zsh_conf/powerlevel10k/powerlevel10k.zsh-theme
+
+[[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
