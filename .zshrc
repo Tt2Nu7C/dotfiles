@@ -19,7 +19,7 @@ export HISTSIZE=1000
 export SAVEHIST=2000
 export EDITOR='vim'
 export PAGER='bat'
-source /home/son/.config/restic/resticenv
+#source /home/son/.config/restic/resticenv
 
 setopt hist_expire_dups_first hist_ignore_dups hist_ignore_space hist_verify
 HIST_STAMPS="yyyy-mm-dd"
