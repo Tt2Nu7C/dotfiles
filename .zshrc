@@ -123,7 +123,7 @@ unzip_d() {
 }
 
 ntfy_post() {
-    curl -H "Authorization: Bearer tk_ukmfwmse2ui8tiezn0xh46q55tgxu" -d "$*" http://10.4.0.2:47346/home
+    curl -H "Authorization: Bearer tk_ukmfwmse2ui8tiezn0xh46q55tgxu" -d "$*" http://ntfy.wg.sumbot.uk/home
 }
 
 wgreload() {
