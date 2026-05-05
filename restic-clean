@@ -1,0 +1,41 @@
+#!/bin/bash
+set -euo pipefail
+
+# Use flock with a lock file
+LOCKFILE="/tmp/restic-clean.lock"
+
+# Wait for lock (or fail immediately)
+exec 200>"$LOCKFILE"
+if ! flock -n 200; then
+    echo "Restic backup already running. Exiting." >&2
+    exit 1
+fi
+
+run_restic() {
+    if [ "$EUID" -ne 0 ]; then
+        # Not root: escalate
+        exec sudo bash -c '
+            set -a
+            source /etc/resticenv
+            set +a
+            exec restic "$@"
+        ' -- "$@"
+    else
+        # Already root
+        set -a
+        source /etc/resticenv
+        set +a
+        exec restic "$@"
+    fi
+}
+
+echo
+date
+echo "Removing old snapshots"
+run_restic forget -d 3 --keep-tag '2TB' -v
+run_restic prune
+echo
+
+# Optional: check repository integrity
+run_restic check --verbose
+date

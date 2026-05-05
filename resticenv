@@ -1,0 +1,5 @@
+export RESTIC_REPOSITORY=
+export RESTIC_PASSWORD=''
+export RESTIC_PACK_SIZE= # 128 max
+export RESTIC_COMPRESSION=max
+
